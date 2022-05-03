@@ -2,8 +2,9 @@
 
 A Maid-like pattern for tracking and cleaning up objects.
 
-## Constructor
+## API
 
+### Constructor
 ```ts
 const trove = new Trove();
 ```
@@ -71,3 +72,41 @@ Constructs a new trove and adds it to the current trove. Shorthand for `trove:Ad
 public attachToInstance(instance: Instance): RBXScriptConnection
 ```
 Attaches the trove to the given instance. Once the instance is destroyed (using the `instance.Destroying` event internally), the trove will destroy itself.
+
+## Example
+
+```ts
+class MyClass {
+	private trove = new Trove();
+
+	constructor() {
+
+		// Add folder:
+		const folder = this.trove.add(new Instance("Folder"));
+
+		// Add function:
+		this.trove.add(() => {
+			print("Cleanup");
+		});
+		
+		// Add event:
+		this.trove.connect(Workspace.Changed, (property: string) => {
+			print(`${property} changed`);
+		});
+
+		// Add another trove:
+		const nestedTrove = this.trove.extend();
+
+		// Add another folder (note: doesn't have to be an instance already in trove):
+		const anotherFolder = this.trove.clone(folder);
+
+		// Remove the above folder (which also destroys it):
+		this.trove.remove(anotherFolder);
+
+	}
+
+	public destroy() {
+		this.trove.destroy();
+	}
+}
+```

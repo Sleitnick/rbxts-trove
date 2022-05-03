@@ -68,11 +68,7 @@ export class Trove {
 	}
 
 	public extend(): Trove {
-		return this.construct(Trove);
-	}
-
-	public construct<T extends Trove.Trackable>(cls: new (...args: unknown[]) => T, ...args: unknown[]): T {
-		return this.add(new cls(...args));
+		return this.add(new Trove());
 	}
 
 	public attachToInstance(instance: Instance): RBXScriptConnection {
