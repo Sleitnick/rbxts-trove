@@ -59,10 +59,6 @@ export class Trove {
 		return this.findAndRemoveFromObjs(obj, true);
 	}
 
-	public connect(signal: RBXScriptSignal, fn: (...args: unknown[]) => void): RBXScriptConnection {
-		return this.add(signal.Connect(fn));
-	}
-
 	public clone<T extends Instance>(instance: T): T {
 		return this.add(instance.Clone());
 	}
@@ -75,7 +71,7 @@ export class Trove {
 		if (!instance.IsDescendantOf(game)) {
 			error("Instance is not a descendant of the game hierarchy", 2);
 		}
-		return this.connect(instance.Destroying, () => this.destroy());
+		return this.add(instance.Destroying.Connect(() => this.destroy()));
 	}
 
 	public clean() {
@@ -107,7 +103,7 @@ export class Trove {
 		} else if (track.cleanup === THREAD_MARKER) {
 			task.cancel(track.obj as thread);
 		} else {
-			(track.obj as Record<string, () => void>)[track.cleanup]();
+			(track.obj as Record<string, (self: unknown) => void>)[track.cleanup](track.obj);
 		}
 	}
 }

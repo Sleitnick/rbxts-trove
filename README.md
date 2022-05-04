@@ -90,9 +90,9 @@ class MyClass {
 		});
 		
 		// Add event:
-		this.trove.connect(Workspace.Changed, (property: string) => {
+		this.trove.add(Workspace.Changed.Connect((property: string) => {
 			print(`${property} changed`);
-		});
+		}));
 
 		// Add another trove:
 		const nestedTrove = this.trove.extend();
