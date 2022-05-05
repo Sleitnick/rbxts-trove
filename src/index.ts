@@ -1,4 +1,7 @@
 export namespace Trove {
+	/**
+	 * A type representing an object that a trove can track.
+	 */
 	export type Trackable =
 		| Instance
 		| RBXScriptConnection
@@ -46,27 +49,56 @@ function getObjCleanupFn<T extends Trove.Trackable>(obj: T, cleanupMethod?: stri
 	error(`failed to get cleanup function for object ${typeOf(obj)}: ${tostring(obj)}`, 3);
 }
 
+/**
+ * A Trove helps track and clean up objects.
+ */
 export class Trove {
 	private objects = new Array<Track>();
 
+	/**
+	 * Add an object to the trove.
+	 * @param obj Object to add
+	 * @param cleanupMethod Optional name of method attached to the object to invoke on cleanup
+	 * @returns Same object added
+	 */
 	public add<T extends Trove.Trackable>(obj: T, cleanupMethod?: string): T {
 		const cleanup = getObjCleanupFn(obj, cleanupMethod);
 		this.objects.push({ obj, cleanup });
 		return obj;
 	}
 
+	/**
+	 * Removes an object from the trove and cleans up the object.
+	 * @param obj Object to remove
+	 * @returns `true` if object was found and removed
+	 */
 	public remove<T extends Trove.Trackable>(obj: T): boolean {
 		return this.findAndRemoveFromObjs(obj, true);
 	}
 
+	/**
+	 * Clones the given instance and adds the clone to the trove.
+	 * @param instance Instance to clone
+	 * @returns New cloned instance
+	 */
 	public clone<T extends Instance>(instance: T): T {
 		return this.add(instance.Clone());
 	}
 
+	/**
+	 * Creates a new trove and adds it to this trove
+	 * @returns The created trove
+	 */
 	public extend(): Trove {
 		return this.add(new Trove());
 	}
 
+	/**
+	 * Attaches the trove to an instance. If the instance is destroyed,
+	 * the trove will clean itself up.
+	 * @param instance
+	 * @returns
+	 */
 	public attachToInstance(instance: Instance): RBXScriptConnection {
 		if (!instance.IsDescendantOf(game)) {
 			error("Instance is not a descendant of the game hierarchy", 2);
@@ -74,11 +106,17 @@ export class Trove {
 		return this.add(instance.Destroying.Connect(() => this.destroy()));
 	}
 
+	/**
+	 * Cleans up all tracked objects in the trove.
+	 */
 	public clean() {
 		this.objects.forEach((obj) => this.cleanupObj(obj));
 		this.objects.clear();
 	}
 
+	/**
+	 * Alias for `clean`.
+	 */
 	public destroy() {
 		this.clean();
 	}

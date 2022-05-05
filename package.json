@@ -1,6 +1,6 @@
 {
   "name": "@rbxts/trove",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Class for tracking and cleaning up objects",
   "main": "out/init.lua",
   "scripts": {
