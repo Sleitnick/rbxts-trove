@@ -107,6 +107,16 @@ export class Trove {
 	}
 
 	/**
+	 * Connects a signal and adds the connection to the trove.
+	 * @param signal Signal to connect
+	 * @param callback Signal callback
+	 * @returns New connection
+	 */
+	public connect(signal: RBXScriptSignal, callback: (...args: unknown[]) => void): RBXScriptConnection {
+		return this.add(signal.Connect(callback));
+	}
+
+	/**
 	 * Cleans up all tracked objects in the trove.
 	 */
 	public clean() {
