@@ -1,10 +1,19 @@
+interface ConnectionLike {
+	Disconnect(this: ConnectionLike): void;
+}
+
+interface SignalLike<T extends Callback = Callback> {
+	Connect(this: SignalLike, callback: T): RBXScriptConnection;
+}
+
 export namespace Trove {
 	/**
 	 * A type representing an object that a trove can track.
 	 */
 	export type Trackable =
 		| Instance
-		| RBXScriptConnection
+		| ConnectionLike
+		| Promise<unknown>
 		| thread
 		| ((...args: unknown[]) => unknown)
 		| { destroy: () => void }
@@ -65,6 +74,48 @@ export class Trove {
 		const cleanup = getObjCleanupFn(obj, cleanupMethod);
 		this.objects.push({ obj, cleanup });
 		return obj;
+	}
+
+	/**
+	 * Adds a promise to the Trove. The trove will call the `cancel()` method of the promise
+	 * if the trove is cleaned up.
+	 * @param promise The Promise to add
+	 * @returns The same Promise
+	 */
+	public addPromise<T>(promise: Promise<T>): Promise<T> {
+		if (promise.getStatus() === Promise.Status.Started) {
+			promise.finally(() => {
+				this.findAndRemoveFromObjs(promise, false);
+			});
+			this.add(promise, "cancel");
+		}
+		return promise;
+	}
+
+	/**
+	 * Connects to a signal, which adds the connection to the trove.
+	 * @param signal The signal to connect
+	 * @param handler The function connected to the signal
+	 * @returns Connection
+	 */
+	public connect<T extends Callback>(
+		signal: SignalLike<T>,
+		handler: (...args: Parameters<T>) => void,
+	): ReturnType<typeof signal.Connect> {
+		return this.add((signal as SignalLike).Connect(handler));
+	}
+
+	/**
+	 * Binds the `renderFn` to RenderStep. The function is unbound when the trove is cleaned up.
+	 * @param name Name of the RenderStep binding
+	 * @param priority Priority (see `Enum.RenderPriority`)
+	 * @param renderFn Function to bind
+	 */
+	public bindToRenderStep(name: string, priority: number, renderFn: (dt: number) => void) {
+		game.GetService("RunService").BindToRenderStep(name, priority, renderFn);
+		this.add(() => {
+			game.GetService("RunService").UnbindFromRenderStep(name);
+		});
 	}
 
 	/**
