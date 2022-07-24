@@ -63,6 +63,7 @@ function getObjCleanupFn<T extends Trove.Trackable>(obj: T, cleanupMethod?: stri
  */
 export class Trove {
 	private objects = new Array<Track>();
+	private cleaning = false;
 
 	/**
 	 * Add an object to the trove.
@@ -71,6 +72,9 @@ export class Trove {
 	 * @returns Same object added
 	 */
 	public add<T extends Trove.Trackable>(obj: T, cleanupMethod?: string): T {
+		if (this.cleaning) {
+			error("Cannot call trove.add() while cleaning", 2);
+		}
 		const cleanup = getObjCleanupFn(obj, cleanupMethod);
 		this.objects.push({ obj, cleanup });
 		return obj;
@@ -83,8 +87,12 @@ export class Trove {
 	 * @returns The same Promise
 	 */
 	public addPromise<T>(promise: Promise<T>): Promise<T> {
+		if (this.cleaning) {
+			error("Cannot call trove.addPromise() while cleaning", 2);
+		}
 		if (promise.getStatus() === Promise.Status.Started) {
 			promise.finally(() => {
+				if (this.cleaning) return;
 				this.findAndRemoveFromObjs(promise, false);
 			});
 			this.add(promise, "cancel");
@@ -102,6 +110,9 @@ export class Trove {
 		signal: SignalLike<T>,
 		handler: (...args: Parameters<T>) => void,
 	): ReturnType<typeof signal.Connect> {
+		if (this.cleaning) {
+			error("Cannot call trove.connect() while cleaning", 2);
+		}
 		return this.add((signal as SignalLike).Connect(handler));
 	}
 
@@ -112,6 +123,9 @@ export class Trove {
 	 * @param renderFn Function to bind
 	 */
 	public bindToRenderStep(name: string, priority: number, renderFn: (dt: number) => void) {
+		if (this.cleaning) {
+			error("Cannot call trove.bindToRenderStep() while cleaning", 2);
+		}
 		game.GetService("RunService").BindToRenderStep(name, priority, renderFn);
 		this.add(() => {
 			game.GetService("RunService").UnbindFromRenderStep(name);
@@ -124,6 +138,9 @@ export class Trove {
 	 * @returns `true` if object was found and removed
 	 */
 	public remove<T extends Trove.Trackable>(obj: T): boolean {
+		if (this.cleaning) {
+			error("Cannot call trove.remove() while cleaning", 2);
+		}
 		return this.findAndRemoveFromObjs(obj, true);
 	}
 
@@ -133,6 +150,9 @@ export class Trove {
 	 * @returns New cloned instance
 	 */
 	public clone<T extends Instance>(instance: T): T {
+		if (this.cleaning) {
+			error("Cannot call trove.clone() while cleaning", 2);
+		}
 		return this.add(instance.Clone());
 	}
 
@@ -141,6 +161,9 @@ export class Trove {
 	 * @returns The created trove
 	 */
 	public extend(): Trove {
+		if (this.cleaning) {
+			error("Cannot call trove.extend() while cleaning", 2);
+		}
 		return this.add(new Trove());
 	}
 
@@ -151,6 +174,9 @@ export class Trove {
 	 * @returns
 	 */
 	public attachToInstance(instance: Instance): RBXScriptConnection {
+		if (this.cleaning) {
+			error("Cannot call trove.attachToInstance() while cleaning", 2);
+		}
 		if (!instance.IsDescendantOf(game)) {
 			error("Instance is not a descendant of the game hierarchy", 2);
 		}
@@ -161,8 +187,11 @@ export class Trove {
 	 * Cleans up all tracked objects in the trove.
 	 */
 	public clean() {
+		if (this.cleaning) return;
+		this.cleaning = true;
 		this.objects.forEach((obj) => this.cleanupObj(obj));
 		this.objects.clear();
+		this.cleaning = false;
 	}
 
 	/**
